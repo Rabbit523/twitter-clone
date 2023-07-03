@@ -28,7 +28,7 @@ export function InfiniteTweetList({
   isError,
   isLoading,
   fetchNewTweets,
-  hasMore,
+  hasMore = false,
 }: InfiniteTweetListProps) {
   if (isLoading) return <h1>Loading...</h1>;
   if (isError) return <h1>Error...</h1>;
@@ -44,7 +44,7 @@ export function InfiniteTweetList({
       <InfiniteScroll
         dataLength={tweets.length}
         next={fetchNewTweets}
-        hasMore={hasMore || false}
+        hasMore={hasMore}
         loader={"Loading..."}
       >
         {tweets.map((tweet) => {
@@ -108,16 +108,16 @@ function TweetCard({
 
   return (
     <li className="flex gap-4 border-b p-4">
-      <Link href={`/profiles/${user.id}`}>
-        <ProfileImage src={user.image} />
+      <Link href={`/profiles/${user?.id}`}>
+        <ProfileImage src={user?.image} />
       </Link>
       <div className="flex flex-grow flex-col">
         <div className="flex gap-1">
           <Link
-            href={`/profiles/${user.id}`}
+            href={`/profiles/${user?.id}`}
             className="font-bold outline-none hover:underline focus-visible:underline"
           >
-            {user.name}
+            {user?.name}
           </Link>
           <span className="text-gray-500">-</span>
           <span>{dateTimeFormatter.format(createdAt)}</span>
