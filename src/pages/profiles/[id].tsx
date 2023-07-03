@@ -12,14 +12,36 @@ import Link from "next/link";
 import { IconHoverEffect } from "y/components/IconHoverEffect";
 import { VscArrowLeft } from "react-icons/vsc";
 import { ProfileImage } from "../../components/ProfileImage";
+import { InfiniteTweetList } from "y/components/InfiniteTweetList";
+import { useSession } from "next-auth/react";
+import { Button } from "y/components/Button";
 
 const ProfilePage: NextPage<
   InferGetServerSidePropsType<typeof getStaticProps>
 > = ({ id }) => {
   const { data: profile } = api.profile.getById.useQuery({ id });
+  const tweets = api.tweet.infinitProfileFeed.useInfiniteQuery(
+    { userId: id },
+    { getNextPageParam: (lastPage) => lastPage.nextCursor }
+  );
+  const trpcUtils = api.useContext();
+const toggleFollow = api.profile.toggleFollow.useMutation({ onSuccess: ({ addedFollow })=> {
+    trpcUtils.profile.getById.setData({ id}, (oldData) => {
+        if (oldData == null) return;
+
+        const countModifier = addedFollow ? 1 : -1;
+
+        return {
+            ...oldData,
+            isFollowing: addedFollow,
+            followersCount: oldData.followersCount + countModifier,
+        }
+    })
+}})
 
   if (profile == null || profile.name == null)
     return <ErrorPage statusCode={404} />;
+
   return (
     <>
       <Head>
@@ -43,10 +65,48 @@ const ProfilePage: NextPage<
             {profile.followsCount} Following
           </div>
         </div>
+        <FollowButton
+          userId={id}
+          isLoading={toggleFollow.isLoading}
+          isFollowing={profile.isFollowing}
+          onClick={() => toggleFollow.mutate({ userId: id })}
+        />
       </header>
+      <main>
+        <InfiniteTweetList
+          tweets={tweets.data?.pages.flatMap((page) => page.tweets)}
+          isError={tweets.isError}
+          isLoading={tweets.isLoading}
+          hasMore={tweets.hasNextPage}
+          fetchNewTweets={tweets.fetchNextPage}
+        />
+      </main>
     </>
   );
 };
+
+function FollowButton({
+  userId,
+  isLoading,
+  isFollowing,
+  onClick,
+}: {
+  userId: string;
+  isLoading: boolean;
+  isFollowing: boolean;
+  onClick: () => void;
+}) {
+  const session = useSession();
+
+  if (session.status !== "authenticated" || session.data.user.id === userId)
+    return null;
+
+  return (
+    <Button disabled={isLoading} onClick={onClick} small gray={isFollowing}>
+      {isFollowing ? "Unfollow" : "Follow"}
+    </Button>
+  );
+}
 
 const pluralRules = new Intl.PluralRules();
 function getPlural(number: number, singular: string, plural: string) {

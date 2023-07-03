@@ -11,6 +11,22 @@ import { type inferAsyncReturnType } from "@trpc/server";
 import { type Prisma } from ".prisma/client";
 
 export const tweetRouter = createTRPCRouter({
+  infinitProfileFeed: publicProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        limit: z.number().optional(),
+        cursor: z.object({ id: z.string(), createdAt: z.date() }).optional(),
+      })
+    )
+    .query(async ({ input: { limit = 10, userId, cursor }, ctx }) => {
+      return await getInfiniteTweets({
+        limit,
+        ctx,
+        cursor,
+        whereClause: { userId },
+      });
+    }),
   infiniteFeed: publicProcedure
     .input(
       z.object({
